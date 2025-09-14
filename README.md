@@ -14,3 +14,6 @@ Planning events and hangouts
 Outputs:
 friendship_groups.csv – Each student with assigned group
 cluster_visualization.png – Optional cluster plot
+
+
+By- Pratik Kumar , Sohel Khan ,Manish Raj
