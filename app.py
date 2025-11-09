@@ -14,7 +14,7 @@ import numpy as np
 @st.cache_data
 def load_data():
     df = pd.read_csv('snu_friendship.csv')
-    columns = ['Hobby_top1', 'Hobby top2', 'Club top1', 'Club top 2', 'Teamwork preference  \n ']
+    columns = ['Hobby_top1', 'Hobby top2', 'Club top1', 'Club top 2', 'Teamwork preference  \n  Like: ( 1=Prefer Solo, 5=Prefer Teams)']
     df_selected = df[columns].dropna()
     return df_selected
 
@@ -37,7 +37,7 @@ def predict_cluster(encoder, kmeans, hobby_top1, hobby_top2, club_top1, club_top
         'Hobby top2': [hobby_top2],
         'Club top1': [club_top1],
         'Club top 2': [club_top2],
-        'Teamwork preference  \n ': [teamwork_pref]
+        'Teamwork preference  \n  Like: ( 1=Prefer Solo, 5=Prefer Teams)': [teamwork_pref]
     })
     encoded_new = encoder.transform(new_data)
     predicted_cluster = kmeans.predict(encoded_new)[0]
@@ -142,7 +142,7 @@ def main():
         top_club2 = cluster_data['Club top 2'].mode().iloc[0] if not cluster_data['Club top 2'].mode().empty else "N/A"
 
         # Average teamwork preference
-        avg_teamwork = cluster_data['Teamwork preference  \n '].mean()
+        avg_teamwork = cluster_data['Teamwork preference  \n  Like: ( 1=Prefer Solo, 5=Prefer Teams)'].mean()
 
         st.write(f"**Top Hobbies:** {top_hobby1}, {top_hobby2}")
         st.write(f"**Top Clubs:** {top_club1}, {top_club2}")
