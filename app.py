@@ -4,7 +4,10 @@ import joblib
 from sklearn.preprocessing import OneHotEncoder
 from sklearn.cluster import KMeans
 from sklearn.decomposition import PCA
+from sklearn.metrics import silhouette_score, davies_bouldin_score
 import matplotlib.pyplot as plt
+import plotly.express as px
+import plotly.graph_objects as go
 from collections import Counter
 import time
 import numpy as np
@@ -28,7 +31,11 @@ def train_model(df_selected):
     kmeans = KMeans(n_clusters=4, random_state=42)
     clusters = kmeans.fit_predict(encoded_data)
 
-    return encoder, kmeans, encoded_data, clusters
+    # Calculate evaluation metrics
+    silhouette = silhouette_score(encoded_data, clusters)
+    davies_bouldin = davies_bouldin_score(encoded_data, clusters)
+
+    return encoder, kmeans, encoded_data, clusters, silhouette, davies_bouldin
 
 # Function to predict cluster
 def predict_cluster(encoder, kmeans, hobby_top1, hobby_top2, club_top1, club_top2, teamwork_pref):
@@ -50,7 +57,7 @@ def main():
 
     # Load data and train model
     df_selected = load_data()
-    encoder, kmeans, encoded_data, clusters = train_model(df_selected)
+    encoder, kmeans, encoded_data, clusters, silhouette, davies_bouldin = train_model(df_selected)
 
     # Sidebar for inputs
     st.sidebar.header("📝 Enter Your Details")
@@ -111,12 +118,81 @@ def main():
         st.markdown(f"<h2 style='text-align: center; color: #4CAF50;'>{full_name}</h2>", unsafe_allow_html=True)
         st.markdown(f"<p style='text-align: center; font-size: 18px;'>🎉 Congratulations! Based on your hobbies and interests, you are a perfect fit for the <strong>{full_name}</strong> club!</p>", unsafe_allow_html=True)
 
-    # Remove the Club Visualization section
+    # Add visualizations section
+    st.header("📊 Cluster Analysis & Visualizations")
 
-    # Club sizes and summaries
-    st.header("🏛️ About Clubs")
-    cluster_counts = Counter(clusters)
-    df_selected['Cluster'] = clusters
+    # Create tabs for different visualizations
+    tab1, tab2, tab3, tab4 = st.tabs(["📈 Cluster Distribution", "🎯 PCA Visualization", "📊 Evaluation Metrics", "📋 Cluster Details"])
+
+    with tab1:
+        st.subheader("Cluster Distribution")
+        cluster_counts = Counter(clusters)
+        cluster_df = pd.DataFrame({
+            'Cluster': list(cluster_counts.keys()),
+            'Number of Students': list(cluster_counts.values()),
+            'Club Name': ['🦋 Social Butterflies', '🎨 Creative Minds', '⚽ Active Enthusiasts', '📚 Thoughtful Individuals']
+        })
+
+        # Animated bar chart
+        fig = px.bar(cluster_df, x='Club Name', y='Number of Students',
+                     title='Student Distribution Across Friendship Groups',
+                     color='Club Name', color_discrete_sequence=px.colors.qualitative.Set3)
+        fig.update_layout(showlegend=False)
+        st.plotly_chart(fig, use_container_width=True)
+
+        # Pie chart
+        fig_pie = px.pie(cluster_df, values='Number of Students', names='Club Name',
+                        title='Proportion of Students in Each Group')
+        st.plotly_chart(fig_pie, use_container_width=True)
+
+    with tab2:
+        st.subheader("PCA Cluster Visualization")
+        # PCA for visualization
+        pca = PCA(n_components=2)
+        pca_data = pca.fit_transform(encoded_data)
+        pca_df = pd.DataFrame(pca_data, columns=['PC1', 'PC2'])
+        pca_df['Cluster'] = clusters
+        pca_df['Club Name'] = pca_df['Cluster'].map({
+            0: '🦋 Social Butterflies',
+            1: '🎨 Creative Minds',
+            2: '⚽ Active Enthusiasts',
+            3: '📚 Thoughtful Individuals'
+        })
+
+        # Interactive scatter plot
+        fig_pca = px.scatter(pca_df, x='PC1', y='PC2', color='Club Name',
+                           title='2D PCA Visualization of Student Clusters',
+                           hover_data=['Club Name'])
+        st.plotly_chart(fig_pca, use_container_width=True)
+
+    with tab3:
+        st.subheader("Clustering Evaluation Metrics")
+
+        # Create metrics display
+        col1, col2 = st.columns(2)
+
+        with col1:
+            st.metric("Silhouette Score", f"{silhouette:.3f}",
+                     help="Higher values (closer to 1) indicate better cluster separation")
+
+        with col2:
+            st.metric("Davies-Bouldin Index", f"{davies_bouldin:.3f}",
+                     help="Lower values indicate better clustering quality")
+
+        # Progress bars for metrics
+        st.subheader("Metric Quality Indicators")
+        st.progress(min(1.0, max(0.0, (silhouette + 1) / 2)))  # Normalize to 0-1
+        st.caption("Silhouette Score Quality (higher is better)")
+
+        st.progress(max(0.0, 1.0 - davies_bouldin))  # Invert DB index
+        st.caption("Davies-Bouldin Index Quality (lower is better)")
+
+    with tab4:
+        st.subheader("Detailed Cluster Analysis")
+        df_selected['Cluster'] = clusters
+
+        # Club sizes and summaries
+        cluster_counts = Counter(clusters)
 
     # Define club_nicknames here as well
     club_nicknames = {
@@ -149,8 +225,25 @@ def main():
         st.write(f"**Average Teamwork Preference:** {avg_teamwork:.2f}")
         st.write("---")
 
+    # Add animations and interactive elements
+    st.header("🎉 Fun Facts & Animations")
+
+    # Animated counter for total students
+    total_students = len(df_selected)
+    st.subheader("📊 Total Students Analyzed")
+    st.markdown(f"<h1 style='text-align: center; color: #FF6B6B;'>{total_students}</h1>", unsafe_allow_html=True)
+
+    # Fun facts
+    col1, col2 = st.columns(2)
+    with col1:
+        st.info("🤝 **Friendship Insight**: Students with similar hobbies tend to form stronger bonds!")
+    with col2:
+        st.success("🎯 **Clustering Magic**: Our AI found 4 distinct friendship groups using advanced machine learning!")
+
+    # Add some emojis and animations
     st.markdown("---")
-    st.markdown("Built with ❤️ using Streamlit and Machine Learning")
+    st.markdown("✨ **Built with ❤️ using Streamlit and Machine Learning** ✨")
+    st.markdown("🚀 **Powered by K-Means Clustering & PCA Visualization** 🚀")
 
 if __name__ == "__main__":
     main()
